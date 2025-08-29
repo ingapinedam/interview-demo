@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Agente Entrevistador IA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.3/cdn.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+</head>
+<body x-data="agenteApp()" x-init="init()">
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎯 Agente Entrevistador IA</h1>
+            <p>Sistema inteligente de generación de preguntas técnicas para entrevistas</p>
+        </div>
+
+        <!-- Status del Sistema -->
+        <div x-show="!sistemaListo" class="alert alert-info">
+            <div x-show="cargando">
+                <span class="loading-spinner"></span>
+                Inicializando sistema...
+            </div>
+            <div x-show="!cargando && error">
+                ❌ <span x-text="error"></span>
+            </div>
+        </div>
+
+        <!-- Estadísticas Generales -->
+        <div x-show="sistemaListo" class="card fade-in">
+            <h2>📊 Estado del Sistema</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" x-text="stats.total_preguntas || 0"></div>
+                    <div class="stat-label">Preguntas Disponibles</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" x-text="stats.total_habilidades || 0"></div>
+                    <div class="stat-label">Habilidades Técnicas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" x-text="habilidadesSeleccionadas.length"></div>
+                    <div class="stat-label">Seleccionadas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" x-text="totalPreguntasGeneradas"></div>
+                    <div class="stat-label">Preguntas Generadas</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selección de Habilidades -->
+        <div x-show="sistemaListo" class="card fade-in">
+            <h2>🎯 Selección de Habilidades Técnicas</h2>
+            <div class="tabs">
+                <div class="tab" :class="{ active: tabActivo === 'seleccionar' }" @click="tabActivo = 'seleccionar'">
+                    Seleccionar Habilidades
+                </div>
+                <div class="tab" :class="{ active: tabActivo === 'buscar' }" @click="tabActivo = 'buscar'">
+                    Buscar Preguntas
+                </div>
+                <div class="tab" :class="{ active: tabActivo === 'agregar' }" @click="tabActivo = 'agregar'">
+                    Agregar Pregunta
+                </div>
+            </div>
+
+            <!-- Tab: Seleccionar Habilidades -->
+            <div class="tab-content" :class="{ active: tabActivo === 'seleccionar' }">
+                <div class="controls-section">
+                    <div class="control-group">
+                        <label class="control-label">Filtro por Nivel</label>
+                        <select class="select" x-model="nivelFiltro">
+                            <option value="">Todos los niveles</option>
+                            <option value="basico">Básico</option>
+                            <option value="intermedio">Intermedio</option>
+                            <option value="avanzado">Avanzado</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Preguntas por Habilidad</label>
+                        <select class="select" x-model="cantidadPorHabilidad">
+                            <option value="1">1 pregunta</option>
+                            <option value="2">2 preguntas</option>
+                            <option value="3">3 preguntas</option>
+                            <option value="4">4 preguntas</option>
+                            <option value="5">5 preguntas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="actions-bar">
+                    <button class="btn btn-outline" @click="seleccionarTodas()" :disabled="generandoPreguntas">
+                        Seleccionar Todas
+                    </button>
+                    <button class="btn btn-outline" @click="seleccionarAleatorias()" :disabled="generandoPreguntas">
+                        🎲 Aleatorias
+                    </button>
+                    <button class="btn btn-secondary" @click="limpiarSeleccion()" :disabled="generandoPreguntas">
+                        Limpiar Selección
+                    </button>
+                </div>
+
+                <div class="habilidades-grid">
+                    <template x-for="habilidad in habilidadesDisponibles" :key="habilidad.nombre">
+                        <div class="habilidad-card"
+                             :class="{ selected: habilidadesSeleccionadas.includes(habilidad.nombre) }"
+                             @click="toggleHabilidad(habilidad.nombre)">
+                            <div class="habilidad-name" x-text="habilidad.nombre"></div>
+                            <div class="habilidad-stats">
+                                <span x-text="habilidad.total + ' preguntas'"></span>
+                                <span x-text="Object.keys(habilidad.por_nivel).length + ' niveles'"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="actions-bar">
+                    <button class="btn btn-primary"
+                            @click="generarPreguntas()"
+                            :disabled="habilidadesSeleccionadas.length === 0 || generandoPreguntas">
+                        <span x-show="generandoPreguntas" class="loading-spinner"></span>
+                        <span x-show="!generandoPreguntas">🚀 Generar Preguntas</span>
+                        <span x-show="generandoPreguntas">Generando...</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab: Buscar Preguntas -->
+            <div class="tab-content" :class="{ active: tabActivo === 'buscar' }">
+                <div class="search-section">
+                    <input type="text"
+                           class="input"
+                           placeholder="Buscar preguntas por término..."
+                           x-model="terminoBusqueda"
+                           @keyup.enter="buscarPreguntas()">
+                    <button class="btn btn-primary" @click="buscarPreguntas()" :disabled="!terminoBusqueda.trim()">
+                        🔍 Buscar
+                    </button>
+                </div>
+
+                <div x-show="resultadosBusqueda.length > 0" class="search-results">
+                    <p class="control-label" x-text="`Encontradas ${resultadosBusqueda.length} preguntas:`"></p>
+                    <template x-for="resultado in resultadosBusqueda" :key="resultado.pregunta">
+                        <div class="search-result-item">
+                            <div class="search-result-meta">
+                                <strong x-text="resultado.habilidad"></strong> •
+                                <span x-text="resultado.nivel"></span> •
+                                <span x-text="resultado.tipo"></span>
+                            </div>
+                            <div x-text="resultado.pregunta"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Tab: Agregar Pregunta -->
+            <div class="tab-content" :class="{ active: tabActivo === 'agregar' }">
+                <div class="form-row">
+                    <div class="control-group">
+                        <label class="control-label">Habilidad</label>
+                        <input type="text"
+                               class="input"
+                               placeholder="Ej: Python, React, SQL..."
+                               x-model="nuevaPregunta.habilidad">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Nivel</label>
+                        <select class="select" x-model="nuevaPregunta.nivel">
+                            <option value="basico">Básico</option>
+                            <option value="intermedio">Intermedio</option>
+                            <option value="avanzado">Avanzado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Pregunta</label>
+                    <textarea class="input"
+                              rows="3"
+                              placeholder="Escribe la pregunta aquí..."
+                              x-model="nuevaPregunta.pregunta"></textarea>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Tipo</label>
+                    <select class="select" x-model="nuevaPregunta.tipo">
+                        <option value="conceptual">Conceptual</option>
+                        <option value="practica">Práctica</option>
+                        <option value="general">General</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" @click="agregarPregunta()" :disabled="!puedeAgregarPregunta()">
+                    ➕ Agregar Pregunta
+                </button>
+            </div>
+        </div>
+
+        <!-- Alertas -->
+        <div x-show="mensaje.texto" class="alert" :class="mensaje.tipo" x-transition>
+            <span x-text="mensaje.texto"></span>
+        </div>
+
+        <!-- Resultados -->
+        <div x-show="preguntasGeneradas && Object.keys(preguntasGeneradas).length > 0" class="preguntas-resultado bounce-in">
+            <div class="card">
+                <h2>📋 Preguntas de Entrevista Generadas</h2>
+
+                <div class="estadisticas-resumen">
+                    <div>
+                        <div class="stat-number" x-text="Object.keys(preguntasGeneradas).length"></div>
+                        <div class="stat-label">Habilidades</div>
+                    </div>
+                    <div>
+                        <div class="stat-number" x-text="totalPreguntasGeneradas"></div>
+                        <div class="stat-label">Total Preguntas</div>
+                    </div>
+                    <div>
+                        <div class="stat-number" x-text="promedioPreguntas"></div>
+                        <div class="stat-label">Promedio</div>
+                    </div>
+                </div>
+
+                <template x-for="[habilidad, preguntas] in Object.entries(preguntasGeneradas)" :key="habilidad">
+                    <div class="pregunta-group">
+                        <h3>🎯 <span x-text="habilidad.toUpperCase()"></span></h3>
+                        <template x-for="(pregunta, index) in preguntas" :key="pregunta">
+                            <div class="pregunta-item">
+                                <span class="pregunta-numero" x-text="index + 1"></span>
+                                <span x-text="pregunta"></span>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <div class="actions-bar">
+                    <button class="btn btn-success" @click="exportarPreguntas('txt')">
+                        📄 Exportar TXT
+                    </button>
+                    <button class="btn btn-success" @click="exportarPreguntas('json')">
+                        📊 Exportar JSON
+                    </button>
+                    <button class="btn btn-success" @click="exportarPreguntas('csv')">
+                        📈 Exportar CSV
+                    </button>
+                    <button class="btn btn-outline" @click="mostrarModalEstadisticas = true">
+                        📊 Ver Estadísticas
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Estadísticas -->
+        <div x-show="mostrarModalEstadisticas" class="modal-overlay" @click.self="mostrarModalEstadisticas = false">
+            <div class="modal">
+                <h3>📊 Estadísticas Detalladas</h3>
+                <div x-show="estadisticasDetalladas">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" x-text="estadisticasDetalladas.resumen?.total_preguntas || 0"></div>
+                            <div class="stat-label">Total en BD</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" x-text="estadisticasDetalladas.resumen?.total_habilidades || 0"></div>
+                            <div class="stat-label">Habilidades</div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <button class="btn btn-primary" @click="descargarBackup()">
+                            💾 Descargar Backup
+                        </button>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" @click="mostrarModalEstadisticas = false">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function agenteApp() {
+            return {
+                // Estado del sistema
+                sistemaListo: false,
+                cargando: true,
+                error: '',
+
+                // Datos
+                stats: {},
+                habilidadesDisponibles: [],
+                habilidadesSeleccionadas: [],
+
+                // Controles
+                nivelFiltro: '',
+                cantidadPorHabilidad: 2,
+                generandoPreguntas: false,
+
+                // Resultados
+                preguntasGeneradas: null,
+
+                // UI
+                tabActivo: 'seleccionar',
+                mensaje: { texto: '', tipo: '' },
+                mostrarModalEstadisticas: false,
+
+                // Búsqueda
+                terminoBusqueda: '',
+                resultadosBusqueda: [],
+
+                // Nueva pregunta
+                nuevaPregunta: {
+                    habilidad: '',
+                    pregunta: '',
+                    tipo: 'conceptual',
+                    nivel: 'intermedio'
+                },
+
+                // Estadísticas
+                estadisticasDetalladas: null,
+
+                // Computadas
+                get totalPreguntasGeneradas() {
+                    if (!this.preguntasGeneradas) return 0;
+                    return Object.values(this.preguntasGeneradas).reduce((sum, preguntas) => sum + preguntas.length, 0);
+                },
+
+                get promedioPreguntas() {
+                    if (!this.preguntasGeneradas || Object.keys(this.preguntasGeneradas).length === 0) return 0;
+                    return (this.totalPreguntasGeneradas / Object.keys(this.preguntasGeneradas).length).toFixed(1);
+                },
+
+                // Inicialización
+                async init() {
+                    try {
+                        await this.cargarStatus();
+                        if (this.sistemaListo) {
+                            await this.cargarHabilidades();
+                        }
+                    } catch (error) {
+                        this.error = 'Error inicializando la aplicación';
+                        console.error(error);
+                    } finally {
+                        this.cargando = false;
+                    }
+                },
+
+                // API calls
+                async cargarStatus() {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        this.stats = data.data;
+                        this.sistemaListo = data.data.sistema_listo;
+                    } else {
+                        this.error = data.message;
+                    }
+                },
+
+                async cargarHabilidades() {
+                    const response = await fetch('/api/habilidades');
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        this.habilidadesDisponibles = data.data;
+                    }
+                },
+
+                async generarPreguntas() {
+                    if (this.habilidadesSeleccionadas.length === 0) {
+                        this.mostrarMensaje('Selecciona al menos una habilidad', 'alert-error');
+                        return;
+                    }
+
+                    this.generandoPreguntas = true;
+
+                    try {
+                        const response = await fetch('/api/generar-preguntas', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                habilidades: this.habilidadesSeleccionadas,
+                                nivel_filtro: this.nivelFiltro || null,
+                                cantidad_por_habilidad: parseInt(this.cantidadPorHabilidad)
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            this.preguntasGeneradas = data.data.preguntas;
+                            this.mostrarMensaje(`✅ Generadas ${data.data.estadisticas.total_preguntas} preguntas`, 'alert-success');
+
+                            // Scroll suave hacia los resultados
+                            setTimeout(() => {
+                                const resultados = document.querySelector('.preguntas-resultado');
+                                if (resultados) {
+                                    resultados.scrollIntoView({ behavior: 'smooth' });
+                                }
+                            }, 100);
+                        } else {
+                            this.mostrarMensaje(data.message, 'alert-error');
+                        }
+                    } catch (error) {
+                        this.mostrarMensaje('Error generando preguntas', 'alert-error');
+                        console.error(error);
+                    } finally {
+                        this.generandoPreguntas = false;
+                    }
+                },
+
+                async exportarPreguntas(formato) {
+                    if (!this.preguntasGeneradas) return;
+
+                    try {
+                        const response = await fetch('/api/exportar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                preguntas: this.preguntasGeneradas,
+                                formato: formato
+                            })
+                        });
+
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+
+                            // Obtener nombre del archivo o generar uno
+                            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                            a.download = `entrevista_tecnica_${timestamp}.${formato}`;
+
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+
+                            this.mostrarMensaje(`✅ Archivo ${formato.toUpperCase()} descargado`, 'alert-success');
+                        } else {
+                            this.mostrarMensaje('Error exportando archivo', 'alert-error');
+                        }
+                    } catch (error) {
+                        this.mostrarMensaje('Error exportando archivo', 'alert-error');
+                        console.error(error);
+                    }
+                },
+
+                async buscarPreguntas() {
+                    if (!this.terminoBusqueda.trim()) return;
+
+                    try {
+                        const response = await fetch('/api/buscar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ termino: this.terminoBusqueda })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            this.resultadosBusqueda = data.data.resultados;
+                            this.mostrarMensaje(`Encontradas ${data.data.total_encontrados} preguntas`, 'alert-info');
+                        } else {
+                            this.mostrarMensaje(data.message, 'alert-error');
+                        }
+                    } catch (error) {
+                        this.mostrarMensaje('Error en búsqueda', 'alert-error');
+                        console.error(error);
+                    }
+                },
+
+                async agregarPregunta() {
+                    if (!this.puedeAgregarPregunta()) return;
+
+                    try {
+                        const response = await fetch('/api/agregar-pregunta', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.nuevaPregunta)
+                        });
+
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            this.mostrarMensaje(data.message, 'alert-success');
+
+                            // Limpiar formulario
+                            this.nuevaPregunta = {
+                                habilidad: '',
+                                pregunta: '',
+                                tipo: 'conceptual',
+                                nivel: 'intermedio'
+                            };
+
+                            // Recargar datos
+                            await this.cargarHabilidades();
+                            await this.cargarStatus();
+                        } else {
+                            this.mostrarMensaje(data.message, 'alert-error');
+                        }
+                    } catch (error) {
+                        this.mostrarMensaje('Error agregando pregunta', 'alert-error');
+                        console.error(error);
+                    }
+                },
+
+                async cargarEstadisticasDetalladas() {
+                    try {
+                        const response = await fetch('/api/estadisticas');
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            this.estadisticasDetalladas = data.data;
+                        }
+                    } catch (error) {
+                        console.error('Error cargando estadísticas:', error);
+                    }
+                },
+
+                async descargarBackup() {
+                    try {
+                        const response = await fetch('/api/backup');
+
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+
+                            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                            a.download = `backup_bd_${timestamp}.sql`;
+
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+
+                            this.mostrarMensaje('✅ Backup descargado', 'alert-success');
+                            this.mostrarModalEstadisticas = false;
+                        } else {
+                            this.mostrarMensaje('Error descargando backup', 'alert-error');
+                        }
+                    } catch (error) {
+                        this.mostrarMensaje('Error descargando backup', 'alert-error');
+                        console.error(error);
+                    }
+                },
+
+                // Utilidades
+                toggleHabilidad(habilidad) {
+                    const index = this.habilidadesSeleccionadas.indexOf(habilidad);
+                    if (index > -1) {
+                        this.habilidadesSeleccionadas.splice(index, 1);
+                    } else {
+                        this.habilidadesSeleccionadas.push(habilidad);
+                    }
+                },
+
+                seleccionarTodas() {
+                    this.habilidadesSeleccionadas = this.habilidadesDisponibles.map(h => h.nombre);
+                    this.mostrarMensaje('✅ Todas las habilidades seleccionadas', 'alert-info');
+                },
+
+                seleccionarAleatorias() {
+                    const cantidad = Math.min(5, this.habilidadesDisponibles.length);
+                    const shuffled = [...this.habilidadesDisponibles].sort(() => 0.5 - Math.random());
+                    this.habilidadesSeleccionadas = shuffled.slice(0, cantidad).map(h => h.nombre);
+                    this.mostrarMensaje(`🎲 Seleccionadas ${cantidad} habilidades al azar`, 'alert-info');
+                },
+
+                limpiarSeleccion() {
+                    this.habilidadesSeleccionadas = [];
+                    this.mostrarMensaje('🧹 Selección limpiada', 'alert-info');
+                },
+
+                puedeAgregarPregunta() {
+                    return this.nuevaPregunta.habilidad.trim() &&
+                           this.nuevaPregunta.pregunta.trim() &&
+                           this.nuevaPregunta.pregunta.trim().length >= 10;
+                },
+
+                mostrarMensaje(texto, tipo) {
+                    this.mensaje = { texto, tipo };
+                    setTimeout(() => {
+                        this.mensaje = { texto: '', tipo: '' };
+                    }, 5000);
+                },
+
+                // Watchers y efectos
+                $watch: {
+                    mostrarModalEstadisticas(value) {
+                        if (value && !this.estadisticasDetalladas) {
+                            this.cargarEstadisticasDetalladas();
+                        }
+                    },
+
+                    habilidadesSeleccionadas(value) {
+                        // Limpiar preguntas generadas si cambió la selección
+                        if (this.preguntasGeneradas) {
+                            this.preguntasGeneradas = null;
+                        }
+                    },
+
+                    tabActivo(value) {
+                        // Limpiar búsqueda al cambiar de tab
+                        if (value !== 'buscar') {
+                            this.resultadosBusqueda = [];
+                            this.terminoBusqueda = '';
+                        }
+                    }
+                }
+            }
+        }
+
+        // Funciones utilitarias globales
+        function copiarAlPortapapeles(texto) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(texto).then(() => {
+                    console.log('Texto copiado al portapapeles');
+                });
+            } else {
+                // Fallback para navegadores más antiguos
+                const textArea = document.createElement('textarea');
+                textArea.value = texto;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            }
+        }
+
+        function formatearFecha(fecha) {
+            return new Date(fecha).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Event listeners globales
+        document.addEventListener('DOMContentLoaded', function() {
+            // Añadir smooth scroll a toda la página
+            document.documentElement.style.scrollBehavior = 'smooth';
+
+            // Manejar teclas de atajo
+            document.addEventListener('keydown', function(e) {
+                // Ctrl/Cmd + G para generar preguntas
+                if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+                    e.preventDefault();
+                    const app = window.Alpine ? Alpine.store('agenteApp') : null;
+                    if (app && app.habilidadesSeleccionadas.length > 0) {
+                        app.generarPreguntas();
+                    }
+                }
+
+                // Escape para cerrar modales
+                if (e.key === 'Escape') {
+                    const app = window.Alpine ? Alpine.store('agenteApp') : null;
+                    if (app) {
+                        app.mostrarModalEstadisticas = false;
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

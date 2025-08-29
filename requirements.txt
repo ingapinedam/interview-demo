@@ -1,0 +1,24 @@
+# Dependencias principales para el Agente Entrevistador
+# Framework web
+Flask==3.0.0
+Flask-CORS==4.0.0
+
+# Dependencias de Flask
+Werkzeug==3.0.1
+Jinja2==3.1.2
+MarkupSafe==2.1.3
+itsdangerous==2.1.2
+click==8.1.7
+blinker==1.7.0
+
+# Base de datos (SQLite viene incluido con Python) -No requiere dependencias adicionales para SQLite
+# Utilidades para fechas y JSON (incluidas en Python estándar) datetime, json, os, sys vienen con Python
+
+# Para desarrollo y debugging (libreria opcional)
+python-dotenv==1.0.0
+
+# Dependencias del sistema original (si las necesitas)
+# Si quieres mantener compatibilidad con el agente CLI original estas son opcionales para la interfaz web:
+# langchain>=0.1.0
+# langchain-community
+# ollama
