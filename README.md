@@ -109,10 +109,13 @@ agente-entrevistador/
 # 1. Activar entorno virtual (si no está activo)
 source venv/bin/activate
 
-# 2. Navegar al directorio src
+# 2. Instalar dependencias
+pip install -r requirements.txt
+
+# 3. Navegar al directorio src
 cd src
 
-# 3. Ejecutar la aplicación
+# 4. Ejecutar la aplicación
 python agente.py
 ```
 
