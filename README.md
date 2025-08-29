@@ -1,23 +1,24 @@
-# 🎯 Agente Entrevistador IA - Sistema de Preguntas Técnicas
+# Agente Entrevistador IA - Sistema de Preguntas Técnicas
 
-Sistema profesional para generar preguntas de entrevistas técnicas personalizado con base de datos SQLite y arquitectura modular.
+Sistema profesional para generar preguntas de entrevistas técnicas personalizado con soporte para **SQLite** y **PostgreSQL** con arquitectura modular.
 
-## 📋 Características
+## Características
 
 - ✅ **130+ preguntas técnicas** curadas por expertos
 - ✅ **12 tecnologías** principales (Python, JavaScript, React, SQL, Java, Docker, etc.)
 - ✅ **3 niveles de dificultad** (básico, intermedio, avanzado)
 - ✅ **Exportación múltiple** (TXT, JSON, CSV)
 - ✅ **Selección inteligente** (por números, nombres, niveles, aleatoria)
-- ✅ **Base de datos local** (sin dependencias externas)
+- ✅ **Base de datos dual** (SQLite local + PostgreSQL remoto)
 - ✅ **Arquitectura modular** y escalable
+- ✅ **Interfaz web** responsive con Flask
 
-## 🚀 Instalación y Configuración
+## Instalación y Configuración
 
 ### Prerequisitos
 
-- **macOS** (probado en versiones recientes)
-- **Python 3.8+** 
+- **Python 3.8+** (recomendado 3.10+)
+- **PostgreSQL** (si planeas usarlo)
 - **Terminal** con acceso a comandos básicos
 
 ### Paso 1: Verificar Python
@@ -29,10 +30,13 @@ python3 --version
 
 Si no tienes Python:
 ```bash
-# Opción A: Instalar con Homebrew
+# Opción A: macOS con Homebrew
 brew install python
 
-# Opción B: Descargar desde python.org
+# Opción B: Ubuntu/Debian
+sudo apt update && sudo apt install python3 python3-venv
+
+# Opción C: Descargar desde python.org
 # Ve a https://www.python.org/downloads/
 ```
 
@@ -54,95 +58,185 @@ mkdir src
 python3 -m venv venv
 
 # Activar entorno virtual
+# En macOS/Linux:
 source venv/bin/activate
+
+# En Windows:
+# venv\Scripts\activate
 
 # Verificar que está activado (debe mostrar (venv) al inicio)
 which python
 ```
 
-### Paso 4: Crear los Archivos del Sistema
+### Paso 4: Instalar Dependencias
+
+```bash
+# Activar entorno virtual si no está activo
+source venv/bin/activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+```
+
+**Si tienes problemas con psycopg2 en Python 3.13:**
+```bash
+# Opción 1: Usar versión más reciente
+pip install "psycopg2-binary>=2.9.10"
+
+# Opción 2: En macOS, instalar PostgreSQL primero
+brew install postgresql@14
+pip install psycopg2 --no-binary psycopg2
+
+# Opción 3: Usar psycopg3 (más moderno)
+pip install "psycopg[binary]>=3.1.0"
+```
+
+### Paso 5: Configurar Base de Datos
+
+#### Opción A: SQLite (Por defecto - sin configuración)
+No requiere configuración adicional. La base de datos se crea automáticamente.
+
+#### Opción B: PostgreSQL (Recomendado para producción)
+
+1. **Instalar PostgreSQL:**
+```bash
+# macOS con Homebrew
+brew install postgresql@14
+brew services start postgresql@14
+
+# Ubuntu/Debian
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+```
+
+2. **Crear base de datos:**
+```bash
+# Conectar como superuser
+sudo -u postgres psql
+
+# Crear usuario y base de datos
+CREATE USER tu_usuario WITH PASSWORD 'tu_password';
+CREATE DATABASE preguntas_entrevista OWNER tu_usuario;
+GRANT ALL PRIVILEGES ON DATABASE preguntas_entrevista TO tu_usuario;
+\q
+```
+
+3. **Configurar variables de entorno:**
+```bash
+# Crear archivo .env en el directorio raíz
+cp .env.example .env
+
+# Editar .env con tus credenciales
+DATABASE_TYPE=postgresql
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=preguntas_entrevista
+POSTGRES_USER=tu_usuario
+POSTGRES_PASSWORD=tu_password
+```
+
+### Paso 6: Crear los Archivos del Sistema
 
 Crea los siguientes archivos en la carpeta `src/`:
 
-#### 4.1 Crear `src/__init__.py`
-```bash
-touch src/__init__.py
-```
+#### Estructura Final
 
-#### 4.2 Crear `src/database_manager.py`
-```python
-# Copiar el código completo del database_manager.py
-# (Disponible en los artifacts anteriores)
-```
-
-#### 4.3 Crear `src/data_loader.py`
-```python
-# Copiar el código completo del data_loader.py
-# (Disponible en los artifacts anteriores)
-```
-
-#### 4.4 Crear `src/agente.py`
-```python
-# Copiar el código completo del agente.py
-# (Disponible en los artifacts anteriores)
-```
-
-### Paso 5: Estructura Final
-
-Tu estructura debe verse así:
 ```
 agente-entrevistador/
 ├── venv/                      # Entorno virtual
 ├── src/
 │   ├── __init__.py           # Archivo vacío
-│   ├── database_manager.py   # Gestor de base de datos
+│   ├── config.py             # Configuración de BD
+│   ├── database_manager.py   # Gestor de BD (dual)
 │   ├── data_loader.py        # Cargador de datos
-│   └── agente.py             # Aplicación principal
+│   ├── agente.py             # Aplicación CLI
+│   ├── app.py                # Servidor web Flask
+│   ├── test_migration.py     # Script de pruebas
+│   └── templates/            # Templates HTML (opcional)
+├── .env.example              # Template de configuración
+├── .env                      # Tu configuración (no versionar)
+├── requirements.txt          # Dependencias
 └── README.md                 # Este archivo
 ```
 
-## ▶️ Ejecutar la Aplicación
+## Ejecutar la Aplicación
 
-### Primera Ejecución
+### Modo CLI (Terminal)
 
 ```bash
 # 1. Activar entorno virtual (si no está activo)
 source venv/bin/activate
 
-# 2. Instalar dependencias
-pip install -r requirements.txt
-
-# 3. Navegar al directorio src
+# 2. Navegar al directorio src
 cd src
 
-# 4. Ejecutar la aplicación
+# 3. Primera ejecución - prueba la conexión
+python test_migration.py
+
+# 4. Ejecutar aplicación CLI
 python agente.py
 ```
 
-### Ejecuciones Posteriores
+### Modo Web (Interfaz HTML)
 
 ```bash
-# Desde el directorio raíz del proyecto
+# 1. Activar entorno virtual
 source venv/bin/activate
+
+# 2. Navegar al directorio src
 cd src
-python agente.py
+
+# 3. Ejecutar servidor Flask
+python app.py
+
+# 4. Abrir navegador en: http://localhost:5000
 ```
 
-## 📖 Guía de Uso
+## Configuración de Base de Datos
 
-### 1. Primera Vez que Ejecutas
+### Cambiar Tipo de Base de Datos
 
+El sistema puede usar SQLite o PostgreSQL. Se configura mediante variables de entorno:
+
+#### Para SQLite (por defecto):
+```bash
+# En .env
+DATABASE_TYPE=sqlite
+SQLITE_PATH=preguntas_entrevista.db
 ```
-🎯 AGENTE ENTREVISTADOR - ARQUITECTURA PROFESIONAL
-================================================================
-🆕 Primera ejecución detectada
-🔄 Inicializando base de datos con preguntas predefinidas...
-📚 Base de datos lista con 130+ preguntas
+
+#### Para PostgreSQL:
+```bash
+# En .env
+DATABASE_TYPE=postgresql
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=preguntas_entrevista
+POSTGRES_USER=tu_usuario
+POSTGRES_PASSWORD=tu_password
 ```
 
-### 2. Selección de Habilidades
+### Migrar de SQLite a PostgreSQL
 
-Tienes varias opciones para seleccionar habilidades:
+```bash
+# 1. Generar SQL desde SQLite existente
+python generate_migration.py
+
+# 2. Ejecutar en PostgreSQL
+psql preguntas_entrevista < migracion_postgresql.sql
+
+# 3. Cambiar configuración
+# Editar .env: DATABASE_TYPE=postgresql
+
+# 4. Probar conexión
+python test_migration.py
+```
+
+## Guía de Uso
+
+### Interfaz CLI
+
+#### 1. Selección de Habilidades
 
 ```bash
 # Por números
@@ -164,24 +258,7 @@ Tu selección: todas
 Tu selección: aleatorio:4
 ```
 
-### 3. Ejemplo de Salida
-
-```
-🎯 PYTHON:
-  1. ¿Cuáles son las diferencias entre listas y tuplas en Python?
-  2. Explica el concepto de decoradores en Python y da un ejemplo
-
-🎯 REACT:
-  1. ¿Cuál es la diferencia entre componentes funcionales y de clase?
-  2. Explica cómo funciona el Virtual DOM
-
-📈 ESTADÍSTICAS FINALES:
-• Habilidades evaluadas: 2
-• Total de preguntas: 4
-• Promedio por habilidad: 2.0
-```
-
-### 4. Opciones del Menú Principal
+#### 2. Menú Principal
 
 1. **Ver resumen** - Muestra preguntas actuales
 2. **Exportar** - Guarda en TXT, JSON o CSV
@@ -191,110 +268,113 @@ Tu selección: aleatorio:4
 6. **Herramientas BD** - Backup y mantenimiento
 7. **Salir** - Termina la aplicación
 
-## 🔧 Configuración Avanzada
+### Interfaz Web
 
-### Filtrar por Nivel de Dificultad
+1. Abre tu navegador en `http://localhost:5000`
+2. Selecciona las habilidades que deseas evaluar
+3. Configura filtros (nivel, cantidad por habilidad)
+4. Genera preguntas
+5. Exporta en el formato deseado
 
-```bash
-# En configuración avanzada, opción 1
-Nivel a filtrar: basico      # Solo preguntas básicas
-Nivel a filtrar: intermedio  # Solo preguntas intermedias  
-Nivel a filtrar: avanzado    # Solo preguntas avanzadas
-Nivel a filtrar: ninguno     # Todos los niveles
+## Características Avanzadas
+
+### Búsqueda de Texto Completo (PostgreSQL)
+
+```sql
+-- Buscar preguntas que contengan "docker"
+SELECT * FROM preguntas 
+WHERE to_tsvector('spanish', pregunta) @@ to_tsquery('spanish', 'docker');
 ```
 
-### Cambiar Cantidad de Preguntas
+### API REST (Modo Web)
 
 ```bash
-# En configuración avanzada, opción 2
-Nueva cantidad por habilidad (1-10): 5
-# Genera 5 preguntas por cada habilidad seleccionada
+# Obtener estado del sistema
+curl http://localhost:5000/api/status
+
+# Obtener todas las habilidades
+curl http://localhost:5000/api/habilidades
+
+# Generar preguntas
+curl -X POST http://localhost:5000/api/generar-preguntas \
+  -H "Content-Type: application/json" \
+  -d '{"habilidades": ["Python", "React"], "cantidad_por_habilidad": 3}'
 ```
 
-### Exportar Preguntas
+### Rendimiento y Escalabilidad
+
+**SQLite (recomendado para):**
+- Desarrollo local
+- Equipos pequeños
+- Hasta 1000 preguntas
+- Sin concurrencia alta
+
+**PostgreSQL (recomendado para):**
+- Producción
+- Equipos grandes
+- Miles de preguntas
+- Acceso concurrente
+- Búsqueda avanzada
+- Análisis de datos
+
+## Solución de Problemas
+
+### Error de Conexión PostgreSQL
 
 ```bash
-# Opción 2 del menú principal
-Formatos disponibles:
-1. TXT (texto plano)
-2. JSON (estructura de datos)  
-3. CSV (hoja de cálculo)
+# Verificar que PostgreSQL esté ejecutándose
+brew services list | grep postgresql
+# o en Linux:
+sudo systemctl status postgresql
 
-Selecciona formato (1-3): 1
-✅ Preguntas exportadas: entrevista_tecnica_20241201_143022.txt
+# Probar conexión manual
+psql -h localhost -p 5432 -U tu_usuario preguntas_entrevista
+
+# Verificar variables de entorno
+python -c "from config import DatabaseConfig; print(DatabaseConfig.get_postgres_connection_params())"
 ```
 
-## 🗃️ Gestión de Base de Datos
-
-### Ver Estadísticas
+### Error: "psycopg2 not found"
 
 ```bash
-# Opción 5 del menú principal
-📊 ESTADÍSTICAS DETALLADAS DE LA BASE DE DATOS
-============================================================
-📁 Archivo: preguntas_entrevista.db
-📚 Total de preguntas: 130
-🎯 Total de habilidades: 12
+# Para Python 3.13 en macOS
+brew install postgresql@14
+pip install "psycopg2-binary>=2.9.10"
+
+# Si sigue fallando, instalar desde fuente
+pip install psycopg2 --no-binary psycopg2
+
+# Alternativa moderna
+pip install "psycopg[binary]>=3.1.0"
 ```
 
-### Backup de la Base de Datos
+### Problemas de Migración
 
 ```bash
-# En herramientas de BD, opción 2
-✅ BD exportada a: backup_bd_20241201_143530.sql
-```
+# Ejecutar suite completa de pruebas
+python test_migration.py
 
-### Buscar Preguntas
-
-```bash
-# En herramientas de BD, opción 4
-Término a buscar: docker
-🔍 Encontradas 15 preguntas:
-• Docker (basico): ¿Qué es Docker y qué problema resuelve?
-• Docker (intermedio): ¿Cuál es la diferencia entre una imagen y...
-```
-
-## ❌ Solución de Problemas
-
-### Error: "No module named 'database_manager'"
-
-```bash
-# Verifica que estés en el directorio src
-cd src
-python agente.py
-
-# Verifica que los archivos existan
-ls -la
-# Debe mostrar: database_manager.py, data_loader.py, agente.py
-```
-
-### Error: "command not found: python3"
-
-```bash
-# Instalar Python
-brew install python
-# O descargar desde python.org
-```
-
-### Error: "No such file or directory"
-
-```bash
-# Verifica que el entorno virtual esté activado
-source venv/bin/activate
-
-# Debe mostrar (venv) al inicio del prompt
+# Si fallan las pruebas, revisar:
+# 1. Conexión a PostgreSQL
+# 2. Credenciales en .env
+# 3. Permisos de usuario en PostgreSQL
 ```
 
 ### Base de Datos Corrupta
 
 ```bash
-# Eliminar base de datos y reinicializar
+# SQLite
 rm preguntas_entrevista.db
-python agente.py
-# Se creará automáticamente una nueva BD
+python agente.py  # Se recrea automáticamente
+
+# PostgreSQL
+psql preguntas_entrevista
+DROP TABLE IF EXISTS preguntas;
+\q
+python agente.py  # Se recrea automáticamente
 ```
 
-## 🎯 Habilidades Disponibles
+## Habilidades Disponibles
 
 El sistema incluye preguntas para estas tecnologías:
 
@@ -311,66 +391,99 @@ El sistema incluye preguntas para estas tecnologías:
 11. **CSS** - 12 preguntas (básico: 4, intermedio: 5, avanzado: 3)
 12. **MongoDB** - 12 preguntas (básico: 4, intermedio: 5, avanzado: 3)
 
-## 📚 Ejemplos de Preguntas por Nivel
-
-### Básico
-- ¿Qué es Python y cuáles son sus características principales?
-- ¿Cuáles son los tipos de datos primitivos en JavaScript?
-- ¿Qué es React y cuáles son sus características principales?
-
-### Intermedio  
-- ¿Cuáles son las diferencias entre listas y tuplas en Python?
-- ¿Cuál es la diferencia entre var, let y const en JavaScript?
-- ¿Qué son los Hooks y cuáles son los más comunes en React?
-
-### Avanzado
-- ¿Cómo funciona el GIL (Global Interpreter Lock) en Python?
-- ¿Cómo implementarías el patrón Observer en JavaScript?
-- ¿Cómo optimizarías el rendimiento de una aplicación React?
-
-## 🔄 Actualización y Mantenimiento
-
-### Agregar Nuevas Preguntas
-
-```bash
-# En configuración avanzada, opción 4
-Nombre de la habilidad: Flutter
-Ingresa preguntas (escribe 'fin' para terminar):
-1. ¿Qué es Flutter y cuáles son sus ventajas?
-2. ¿Cómo manejas el estado en Flutter?
-fin
-Nivel (basico/intermedio/avanzado) [intermedio]: basico
-✅ Se agregaron 2 preguntas para Flutter
-```
+## Backup y Mantenimiento
 
 ### Backup Automático
 
-El sistema crea automáticamente:
-- `preguntas_entrevista.db` - Base de datos principal
-- `entrevista_tecnica_FECHA.txt` - Exports de sesiones
-- `backup_bd_FECHA.sql` - Backups completos
+```bash
+# PostgreSQL
+pg_dump preguntas_entrevista > backup_$(date +%Y%m%d).sql
 
-## 📞 Soporte
+# SQLite (desde la aplicación)
+python agente.py
+# Menú -> Herramientas BD -> Exportar BD completa
+```
 
-Si encuentras problemas:
+### Optimización PostgreSQL
 
-1. **Verifica la estructura** de archivos
-2. **Confirma que el entorno virtual** esté activo
-3. **Revisa que todos los archivos** estén presentes
-4. **Elimina la BD** y deja que se recree automáticamente
+```sql
+-- Análizar tablas para optimizar consultas
+ANALYZE preguntas;
 
-## 🏆 Casos de Uso
+-- Ver estadísticas de uso
+SELECT schemaname, tablename, n_tup_ins, n_tup_upd, n_tup_del
+FROM pg_stat_user_tables 
+WHERE tablename = 'preguntas';
+
+-- Reindexar si es necesario
+REINDEX TABLE preguntas;
+```
+
+## Casos de Uso
 
 - **Reclutadores**: Generar preguntas personalizadas por rol
-- **Equipos de desarrollo**: Preparar entrevistas técnicas
+- **Equipos de desarrollo**: Preparar entrevistas técnicas  
 - **Candidatos**: Practicar para entrevistas
 - **Empresas**: Estandarizar procesos de entrevistas
 - **Bootcamps**: Material de evaluación técnica
+- **Consultorías**: Evaluar competencias técnicas
 
-## 📄 Licencia
+## Desarrollo y Contribución
 
-Este proyecto es de uso libre para fines educativos y profesionales.
+### Agregar Nuevas Tecnologías
+
+```python
+# En data_loader.py, agregar al diccionario preguntas_iniciales
+"NuevaTecnologia": {
+    "basico": [
+        "¿Qué es NuevaTecnologia?",
+        # ... más preguntas
+    ],
+    "intermedio": [
+        # ... preguntas intermedias
+    ],
+    "avanzado": [
+        # ... preguntas avanzadas  
+    ]
+}
+```
+
+### Ejecutar Pruebas
+
+```bash
+# Suite completa de pruebas
+python test_migration.py
+
+# Probar solo conexión
+python database_manager.py
+
+# Validar datos
+python data_loader.py
+```
+
+## Arquitectura Técnica
+
+### Componentes Principales
+
+- **config.py**: Manejo de configuración dual SQLite/PostgreSQL
+- **database_manager.py**: Abstracción de base de datos con soporte dual
+- **data_loader.py**: Cargador de datos inicial con 130+ preguntas
+- **agente.py**: Interfaz CLI interactiva
+- **app.py**: Servidor web Flask con API REST
+
+### Ventajas de PostgreSQL
+
+- Búsqueda de texto completo en español
+- Índices GIN para consultas rápidas  
+- Transacciones ACID robustas
+- Escalabilidad horizontal
+- Análisis avanzado con SQL
+- Conexiones concurrentes
+
+### Compatibilidad
+
+El código funciona con ambas bases de datos sin cambios. La migración es transparente cambiando solo variables de entorno.
 
 ---
 
-*Desarrollado con Python 3, SQLite y mucho ☕*
+*Desarrollado con Python 3, SQLite/PostgreSQL, Flask y arquitectura modular*

@@ -1,6 +1,7 @@
 """
 Cargador de Datos Iniciales para Preguntas de Entrevista
 Contiene todas las preguntas predefinidas y métodos para cargarlas
+Compatible con SQLite y PostgreSQL
 """
 
 from database_manager import DatabaseManager
@@ -285,18 +286,18 @@ class DataLoader:
         try:
             # Verificar si ya hay datos
             if db_manager.contar_preguntas() > 0 and not forzar_recarga:
-                print("📚 La base de datos ya contiene preguntas")
+                print("Base de datos ya contiene preguntas")
                 return True
 
             if forzar_recarga:
-                print("🔄 Forzando recarga de datos...")
+                print("Forzando recarga de datos...")
                 db_manager.limpiar_base_datos()
 
-            print("📝 Cargando preguntas iniciales en la base de datos...")
+            print("Cargando preguntas iniciales en la base de datos...")
             total_cargadas = 0
 
             for habilidad, niveles in self.preguntas_iniciales.items():
-                print(f"  🔄 Cargando {habilidad}...")
+                print(f"  Cargando {habilidad}...")
 
                 for nivel, preguntas in niveles.items():
                     for pregunta in preguntas:
@@ -309,13 +310,13 @@ class DataLoader:
                         ):
                             total_cargadas += 1
 
-                print(f"  ✅ {habilidad}: {sum(len(p) for p in niveles.values())} preguntas")
+                print(f"  {habilidad}: {sum(len(p) for p in niveles.values())} preguntas")
 
-            print(f"✅ Carga completada: {total_cargadas} preguntas cargadas")
+            print(f"Carga completada: {total_cargadas} preguntas cargadas")
             return True
 
         except Exception as e:
-            print(f"❌ Error cargando datos iniciales: {e}")
+            print(f"Error cargando datos iniciales: {e}")
             return False
 
     def generar_archivo_sql(self, archivo_salida: str = "preguntas_iniciales.sql") -> bool:
@@ -327,70 +328,49 @@ class DataLoader:
                 f.write("-- Generado automáticamente por DataLoader\n")
                 f.write("-- Fecha: " + str(datetime.now()) + "\n\n")
 
-                # Crear tabla
+                # Crear tabla compatible con PostgreSQL
                 f.write("""
-                        -- Crear tabla de preguntas
-                        CREATE TABLE IF NOT EXISTS preguntas
-                        (
-                            id
-                            INTEGER
-                            PRIMARY
-                            KEY
-                            AUTOINCREMENT,
-                            habilidad
-                            TEXT
-                            NOT
-                            NULL,
-                            pregunta
-                            TEXT
-                            NOT
-                            NULL,
-                            tipo
-                            TEXT
-                            DEFAULT
-                            'general',
-                            nivel
-                            TEXT
-                            DEFAULT
-                            'intermedio',
-                            categoria
-                            TEXT
-                            DEFAULT
-                            'tecnica',
-                            created_at
-                            TIMESTAMP
-                            DEFAULT
-                            CURRENT_TIMESTAMP
-                        );
+-- Crear tabla de preguntas (compatible PostgreSQL/SQLite)
+CREATE TABLE IF NOT EXISTS preguntas (
+    id SERIAL PRIMARY KEY,
+    habilidad VARCHAR(100) NOT NULL,
+    pregunta TEXT NOT NULL,
+    tipo VARCHAR(50) DEFAULT 'general',
+    nivel VARCHAR(50) DEFAULT 'intermedio',
+    categoria VARCHAR(50) DEFAULT 'tecnica',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Crear índices
-                        CREATE INDEX IF NOT EXISTS idx_habilidad ON preguntas(habilidad);
-                        CREATE INDEX IF NOT EXISTS idx_tipo_nivel ON preguntas(tipo, nivel);
+CREATE INDEX IF NOT EXISTS idx_habilidad ON preguntas(habilidad);
+CREATE INDEX IF NOT EXISTS idx_tipo_nivel ON preguntas(tipo, nivel);
 
-                        -- Limpiar datos existentes (opcional)
+-- Limpiar datos existentes (opcional)
 -- DELETE FROM preguntas;
 
 -- Insertar preguntas
-                        """)
+""")
 
-                # Insertar preguntas
+                # Insertar preguntas con sintaxis compatible
                 for habilidad, niveles in self.preguntas_iniciales.items():
                     f.write(f"\n-- {habilidad} --\n")
 
                     for nivel, preguntas in niveles.items():
                         for pregunta in preguntas:
                             tipo = "conceptual" if "concepto" in pregunta.lower() else "practica"
+                            pregunta_escaped = pregunta.replace("'", "''")
                             f.write(
-                                f"INSERT INTO preguntas (habilidad, pregunta, tipo, nivel, categoria) VALUES ('{habilidad}', '{pregunta.replace("'", "''")}', '{tipo}', '{nivel}', 'tecnica');\n")
+                                f"INSERT INTO preguntas (habilidad, pregunta, tipo, nivel, categoria) "
+                                f"VALUES ('{habilidad}', '{pregunta_escaped}', '{tipo}', '{nivel}', 'tecnica');\n")
 
                 f.write(
                     f"\n-- Total de preguntas: {sum(len(p) for niveles in self.preguntas_iniciales.values() for p in niveles.values())}\n")
 
-            print(f"✅ Archivo SQL generado: {archivo_salida}")
+            print(f"Archivo SQL generado: {archivo_salida}")
             return True
 
         except Exception as e:
-            print(f"❌ Error generando archivo SQL: {e}")
+            print(f"Error generando archivo SQL: {e}")
             return False
 
     def obtener_estadisticas_datos(self) -> dict:
@@ -416,23 +396,23 @@ class DataLoader:
         """Permite agregar una habilidad personalizada con sus preguntas"""
         try:
             if habilidad in self.preguntas_iniciales:
-                print(f"⚠️ La habilidad '{habilidad}' ya existe")
+                print(f"La habilidad '{habilidad}' ya existe")
                 return False
 
             # Validar estructura
             niveles_validos = ['basico', 'intermedio', 'avanzado']
             for nivel in preguntas_por_nivel.keys():
                 if nivel not in niveles_validos:
-                    print(f"❌ Nivel inválido: {nivel}. Use: {niveles_validos}")
+                    print(f"Nivel inválido: {nivel}. Use: {niveles_validos}")
                     return False
 
             self.preguntas_iniciales[habilidad] = preguntas_por_nivel
             print(
-                f"✅ Habilidad '{habilidad}' agregada con {sum(len(p) for p in preguntas_por_nivel.values())} preguntas")
+                f"Habilidad '{habilidad}' agregada con {sum(len(p) for p in preguntas_por_nivel.values())} preguntas")
             return True
 
         except Exception as e:
-            print(f"❌ Error agregando habilidad personalizada: {e}")
+            print(f"Error agregando habilidad personalizada: {e}")
             return False
 
     def exportar_preguntas_json(self, archivo_salida: str = "preguntas_backup.json") -> bool:
@@ -454,11 +434,11 @@ class DataLoader:
             with open(archivo_salida, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
-            print(f"✅ Preguntas exportadas a JSON: {archivo_salida}")
+            print(f"Preguntas exportadas a JSON: {archivo_salida}")
             return True
 
         except Exception as e:
-            print(f"❌ Error exportando a JSON: {e}")
+            print(f"Error exportando a JSON: {e}")
             return False
 
     def importar_preguntas_json(self, archivo_entrada: str) -> bool:
@@ -467,7 +447,7 @@ class DataLoader:
             import json
 
             if not os.path.exists(archivo_entrada):
-                print(f"❌ Archivo no encontrado: {archivo_entrada}")
+                print(f"Archivo no encontrado: {archivo_entrada}")
                 return False
 
             with open(archivo_entrada, 'r', encoding='utf-8') as f:
@@ -475,14 +455,14 @@ class DataLoader:
 
             if 'preguntas' in data:
                 self.preguntas_iniciales.update(data['preguntas'])
-                print(f"✅ Preguntas importadas desde: {archivo_entrada}")
+                print(f"Preguntas importadas desde: {archivo_entrada}")
                 return True
             else:
-                print("❌ Formato de archivo JSON inválido")
+                print("Formato de archivo JSON inválido")
                 return False
 
         except Exception as e:
-            print(f"❌ Error importando desde JSON: {e}")
+            print(f"Error importando desde JSON: {e}")
             return False
 
     def validar_integridad_datos(self) -> dict:
@@ -529,13 +509,13 @@ class DataLoader:
 
     def mostrar_resumen_contenido(self):
         """Muestra un resumen del contenido disponible"""
-        print("\n📚 RESUMEN DE CONTENIDO DISPONIBLE")
+        print("\nRESUMEN DE CONTENIDO DISPONIBLE")
         print("=" * 50)
 
         stats = self.obtener_estadisticas_datos()
-        print(f"📊 Total: {stats['total_preguntas']} preguntas en {stats['total_habilidades']} habilidades")
+        print(f"Total: {stats['total_preguntas']} preguntas en {stats['total_habilidades']} habilidades")
 
-        print(f"\n🎯 HABILIDADES DISPONIBLES:")
+        print(f"\nHABILIDADES DISPONIBLES:")
         print("-" * 30)
 
         for habilidad, data in stats['estadisticas_por_habilidad'].items():
@@ -550,7 +530,7 @@ class DataLoader:
 def inicializar_base_datos_completa(db_path: str = "preguntas_entrevista.db", forzar_recarga: bool = False):
     """Función utilitaria para inicializar completamente la base de datos"""
     try:
-        print("🚀 Inicializando base de datos completa...")
+        print("Inicializando base de datos completa...")
 
         # Crear gestor de BD
         db_manager = DatabaseManager(db_path)
@@ -560,26 +540,26 @@ def inicializar_base_datos_completa(db_path: str = "preguntas_entrevista.db", fo
 
         # Cargar datos iniciales
         if data_loader.cargar_datos_iniciales(db_manager, forzar_recarga):
-            print("✅ Base de datos inicializada correctamente")
+            print("Base de datos inicializada correctamente")
 
             # Mostrar estadísticas
             resumen = db_manager.obtener_resumen_completo()
-            print(f"📊 Total de preguntas: {resumen['total_preguntas']}")
-            print(f"📊 Total de habilidades: {resumen['total_habilidades']}")
+            print(f"Total de preguntas: {resumen['total_preguntas']}")
+            print(f"Total de habilidades: {resumen['total_habilidades']}")
 
             return True
         else:
-            print("❌ Error inicializando base de datos")
+            print("Error inicializando base de datos")
             return False
 
     except Exception as e:
-        print(f"❌ Error en inicialización completa: {e}")
+        print(f"Error en inicialización completa: {e}")
         return False
 
 
 if __name__ == "__main__":
     # Permitir ejecutar este archivo directamente para inicializar la BD
-    print("🎯 EJECUTANDO DATA LOADER INDEPENDIENTE")
+    print("EJECUTANDO DATA LOADER INDEPENDIENTE")
     print("=" * 50)
 
     # Opciones disponibles
@@ -600,11 +580,11 @@ if __name__ == "__main__":
 
     elif opcion == "2":
         if data_loader.generar_archivo_sql():
-            print("✅ Archivo SQL generado exitosamente")
+            print("Archivo SQL generado exitosamente")
 
     elif opcion == "3":
         stats = data_loader.obtener_estadisticas_datos()
-        print("\n📊 ESTADÍSTICAS DE DATOS INICIALES:")
+        print("\nESTADÍSTICAS DE DATOS INICIALES:")
         print("=" * 40)
         print(f"Total de preguntas: {stats['total_preguntas']}")
         print(f"Total de habilidades: {stats['total_habilidades']}")
@@ -616,22 +596,22 @@ if __name__ == "__main__":
 
     elif opcion == "4":
         if data_loader.exportar_preguntas_json():
-            print("✅ Archivo JSON generado exitosamente")
+            print("Archivo JSON generado exitosamente")
 
     elif opcion == "5":
         resultados = data_loader.validar_integridad_datos()
-        print("\n🔍 VALIDACIÓN DE INTEGRIDAD:")
+        print("\nVALIDACIÓN DE INTEGRIDAD:")
         print("=" * 35)
 
         if resultados['errores']:
-            print(f"❌ Errores encontrados: {len(resultados['errores'])}")
+            print(f"Errores encontrados: {len(resultados['errores'])}")
             for error in resultados['errores'][:5]:  # Mostrar máximo 5
                 print(f"  • {error}")
         else:
-            print("✅ No se encontraron errores")
+            print("No se encontraron errores")
 
         if resultados['advertencias']:
-            print(f"\n⚠️ Advertencias: {len(resultados['advertencias'])}")
+            print(f"\nAdvertencias: {len(resultados['advertencias'])}")
             for advertencia in resultados['advertencias'][:5]:  # Mostrar máximo 5
                 print(f"  • {advertencia}")
 
@@ -639,7 +619,7 @@ if __name__ == "__main__":
         data_loader.mostrar_resumen_contenido()
 
     elif opcion == "7":
-        print("👋 ¡Adiós!")
+        print("¡Adiós!")
 
     else:
-        print("⚠️ Opción no válida")
+        print("Opción no válida")

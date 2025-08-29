@@ -1,7 +1,7 @@
 -- =====================================================
 -- MIGRACIÓN DE PREGUNTAS DE ENTREVISTA
 -- =====================================================
--- Generado: 2025-08-29 09:18:24
+-- Generado: 2025-08-29 14:50:36
 -- Origen: ../preguntas_entrevista.db
 -- Total registros: 40
 -- =====================================================
@@ -261,4 +261,4 @@ GROUP BY nivel
 ORDER BY total DESC;
 
 -- Total de INSERT statements generados: 40
--- Archivo generado: 2025-08-29 09:18:24
+-- Archivo generado: 2025-08-29 14:50:36
