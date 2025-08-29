@@ -124,7 +124,7 @@ GRANT ALL PRIVILEGES ON DATABASE preguntas_entrevista TO tu_usuario;
 3. **Configurar variables de entorno:**
 ```bash
 # Crear archivo .env en el directorio raíz
-cp .env.example .env
+cp .env
 
 # Editar .env con tus credenciales
 DATABASE_TYPE=postgresql
@@ -153,7 +153,6 @@ agente-entrevistador/
 │   ├── app.py                # Servidor web Flask
 │   ├── test_migration.py     # Script de pruebas
 │   └── templates/            # Templates HTML (opcional)
-├── .env.example              # Template de configuración
 ├── .env                      # Tu configuración (no versionar)
 ├── requirements.txt          # Dependencias
 └── README.md                 # Este archivo
