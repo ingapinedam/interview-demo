@@ -211,32 +211,31 @@ class DatabaseManager:
             cursor = conn.cursor()
 
             placeholder = '%s' if self.db_type == 'postgresql' else '?'
-            like_operator = 'ILIKE' if self.db_type == 'postgresql' else 'LIKE'
 
             # Contar total
             cursor.execute(f'''
                 SELECT COUNT(*)
                 FROM preguntas
-                WHERE habilidad {like_operator} {placeholder}
-            ''', (f'%{habilidad}%',))
+                WHERE habilidad = {placeholder}
+            ''', (habilidad,))
             total = cursor.fetchone()[0]
 
             # Contar por nivel
             cursor.execute(f'''
                 SELECT nivel, COUNT(*)
                 FROM preguntas
-                WHERE habilidad {like_operator} {placeholder}
+                WHERE habilidad = {placeholder}
                 GROUP BY nivel
-            ''', (f'%{habilidad}%',))
+            ''', (habilidad,))
             niveles = dict(cursor.fetchall())
 
             # Contar por tipo
             cursor.execute(f'''
                 SELECT tipo, COUNT(*)
                 FROM preguntas
-                WHERE habilidad {like_operator} {placeholder}
+                WHERE habilidad = {placeholder}
                 GROUP BY tipo
-            ''', (f'%{habilidad}%',))
+            ''', (habilidad,))
             tipos = dict(cursor.fetchall())
 
             conn.close()
@@ -428,8 +427,8 @@ class DatabaseManager:
             like_operator = 'ILIKE' if self.db_type == 'postgresql' else 'LIKE'
 
             for habilidad in habilidades:
-                query = f"SELECT pregunta FROM preguntas WHERE habilidad {like_operator} {placeholder}"
-                params = [f'%{habilidad}%']
+                query = f"SELECT pregunta FROM preguntas WHERE habilidad = {placeholder}"
+                params = [habilidad]
 
                 if nivel:
                     query += f" AND nivel = {placeholder}"

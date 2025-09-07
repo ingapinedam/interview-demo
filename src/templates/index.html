@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎯 Agente Entrevistador IA</title>
+    <title>🎯 Agente Entrevistador</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.3/cdn.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
@@ -12,7 +12,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>🎯 Agente Entrevistador IA</h1>
+            <h1>🎯 Agente Entrevistador</h1>
             <p>Sistema inteligente de generación de preguntas técnicas para entrevistas</p>
         </div>
 
@@ -93,9 +93,6 @@
                     <button class="btn btn-outline" @click="seleccionarTodas()" :disabled="generandoPreguntas">
                         Seleccionar Todas
                     </button>
-                    <button class="btn btn-outline" @click="seleccionarAleatorias()" :disabled="generandoPreguntas">
-                        🎲 Aleatorias
-                    </button>
                     <button class="btn btn-secondary" @click="limpiarSeleccion()" :disabled="generandoPreguntas">
                         Limpiar Selección
                     </button>
@@ -104,7 +101,7 @@
                 <div class="habilidades-grid">
                     <template x-for="habilidad in habilidadesDisponibles" :key="habilidad.nombre">
                         <div class="habilidad-card"
-                             :class="{ selected: habilidadesSeleccionadas.includes(habilidad.nombre) }"
+                             :class="{ selected: habilidadesSeleccionadas.some(h => h === habilidad.nombre) }"
                              @click="toggleHabilidad(habilidad.nombre)">
                             <div class="habilidad-name" x-text="habilidad.nombre"></div>
                             <div class="habilidad-stats">
@@ -188,6 +185,7 @@
                         <option value="general">General</option>
                     </select>
                 </div>
+                <br>
                 <button class="btn btn-success" @click="agregarPregunta()" :disabled="!puedeAgregarPregunta()">
                     ➕ Agregar Pregunta
                 </button>
@@ -206,18 +204,20 @@
 
                 <div class="estadisticas-resumen">
                     <div>
-                        <div class="stat-number" x-text="Object.keys(preguntasGeneradas).length"></div>
-                        <div class="stat-label">Habilidades</div>
+                        <div class="stat-number-fix" x-text="Object.keys(preguntasGeneradas).length"></div>
+                        <div class="stat-label-fix">Habilidades</div>
                     </div>
                     <div>
-                        <div class="stat-number" x-text="totalPreguntasGeneradas"></div>
-                        <div class="stat-label">Total Preguntas</div>
+                        <div class="stat-number-fix" x-text="totalPreguntasGeneradas"></div>
+                        <div class="stat-label-fix">Total Preguntas</div>
                     </div>
                     <div>
-                        <div class="stat-number" x-text="promedioPreguntas"></div>
-                        <div class="stat-label">Promedio</div>
+                        <div class="stat-number-fix" x-text="promedioPreguntas"></div>
+                        <div class="stat-label-fix">Promedio</div>
                     </div>
                 </div>
+
+                <br>
 
                 <template x-for="[habilidad, preguntas] in Object.entries(preguntasGeneradas)" :key="habilidad">
                     <div class="pregunta-group">
@@ -240,9 +240,6 @@
                     </button>
                     <button class="btn btn-success" @click="exportarPreguntas('csv')">
                         📈 Exportar CSV
-                    </button>
-                    <button class="btn btn-outline" @click="mostrarModalEstadisticas = true">
-                        📊 Ver Estadísticas
                     </button>
                 </div>
             </div>
@@ -560,15 +557,9 @@
                     this.mostrarMensaje('✅ Todas las habilidades seleccionadas', 'alert-info');
                 },
 
-                seleccionarAleatorias() {
-                    const cantidad = Math.min(5, this.habilidadesDisponibles.length);
-                    const shuffled = [...this.habilidadesDisponibles].sort(() => 0.5 - Math.random());
-                    this.habilidadesSeleccionadas = shuffled.slice(0, cantidad).map(h => h.nombre);
-                    this.mostrarMensaje(`🎲 Seleccionadas ${cantidad} habilidades al azar`, 'alert-info');
-                },
-
                 limpiarSeleccion() {
                     this.habilidadesSeleccionadas = [];
+                    this.preguntasGeneradas = {};
                     this.mostrarMensaje('🧹 Selección limpiada', 'alert-info');
                 },
 

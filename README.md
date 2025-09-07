@@ -1,4 +1,4 @@
-# Agente Entrevistador IA - Sistema de Preguntas Técnicas
+# Agente Entrevistador - Sistema de Preguntas Técnicas
 
 Sistema profesional para generar preguntas de entrevistas técnicas personalizado con soporte para **SQLite** y **PostgreSQL** con arquitectura modular.
 

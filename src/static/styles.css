@@ -103,9 +103,22 @@ body {
     color: var(--primary-color);
 }
 
+.stat-number-fix {
+    font-size: 2rem;
+    font-weight: 800;
+    color: white;
+}
+
 .stat-label {
     font-size: 0.875rem;
     color: var(--gray-500);
+    font-weight: 500;
+    margin-top: 0.25rem;
+}
+
+.stat-label-fix {
+    font-size: 0.875rem;
+    color: white;
     font-weight: 500;
     margin-top: 0.25rem;
 }
@@ -185,6 +198,7 @@ body {
     font-size: 1rem;
     transition: border-color 0.3s ease;
     background: white;
+    width: 400px;
 }
 
 .select:focus, .input:focus {

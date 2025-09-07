@@ -265,7 +265,7 @@ Habilidad a evaluar: {habilidad}"""
 
 
 def main():
-    print("\n🎯 BIENVENIDO AL AGENTE ENTREVISTADOR IA")
+    print("\n🎯 BIENVENIDO AL AGENTE ENTREVISTADOR")
     print("=" * 60)
     print("Este agente te ayudará a generar preguntas técnicas")
     print("personalizadas para entrevistas de trabajo.")
